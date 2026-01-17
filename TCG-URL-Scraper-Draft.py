@@ -7,6 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import json
 import time
+import os
 
 def scrape_tcg_price(url):
     """
@@ -112,8 +113,8 @@ def scrape_multiple_products(urls):
         list: List of dictionaries containing scraped data
     """
     results = []
-    for url in urls:
-        print(f"\nScraping: {url}")
+    for i, url in enumerate(urls, 1):
+        print(f"\n[{i}/{len(urls)}] Scraping: {url}")
         data = scrape_tcg_price(url)
         results.append(data)
         time.sleep(1)  # Be respectful to the server - wait 1 second between requests
@@ -121,21 +122,94 @@ def scrape_multiple_products(urls):
     return results
 
 
+def load_urls_from_file(filename='urls.json'):
+    """
+    Loads URLs from a JSON file.
+    
+    Args:
+        filename (str): Path to the JSON file
+        
+    Returns:
+        list: List of URLs
+    """
+    try:
+        if not os.path.exists(filename):
+            print(f"Error: {filename} not found.")
+            return []
+        
+        with open(filename, 'r') as f:
+            data = json.load(f)
+            # Handle different possible JSON structures
+            if isinstance(data, dict) and 'urls' in data:
+                urls = data['urls']
+            elif isinstance(data, list):
+                urls = data
+            else:
+                print("Invalid JSON structure. Expected {'urls': [...]} or [...]")
+                return []
+        
+        print(f"Loaded {len(urls)} URLs from {filename}")
+        return urls
+    except Exception as e:
+        print(f"Error loading URLs from {filename}: {e}")
+        return []
+
+
+def save_results_to_file(results, output_file='scrape_results.json'):
+    """
+    Saves scraping results to a JSON file.
+    
+    Args:
+        results (list): List of scraping results
+        output_file (str): Output file path
+    """
+    try:
+        with open(output_file, 'w') as f:
+            json.dump(results, f, indent=2)
+        print(f"\nSaved results for {len(results)} URLs to {output_file}")
+    except Exception as e:
+        print(f"Error saving results: {e}")
+
+
 if __name__ == "__main__":
-    # Example usage
-    test_url = "https://www.tcgplayer.com/product/504467?Language=English"
-    
     print("=== TCG Player Price Scraper ===\n")
-    result = scrape_tcg_price(test_url)
     
-    # Print results as JSON
-    print("\nResult:")
-    print(json.dumps(result, indent=2))
+    # Load URLs from the JSON file
+    urls = load_urls_from_file('urls.json')
     
-    # Example: scraping multiple products
-    # multiple_urls = [
-    #     "https://www.tcgplayer.com/product/504467?Language=English",
-    #     # Add more URLs here
-    # ]
-    # results = scrape_multiple_products(multiple_urls)
-    # print(json.dumps(results, indent=2))
+    if not urls:
+        print("No URLs found. Make sure urls.json exists and contains URLs.")
+    else:
+        print(f"\nStarting to scrape {len(urls)} URLs...\n")
+        
+        # Scrape all URLs
+        results = scrape_multiple_products(urls)
+        
+        # Print summary
+        print("\n" + "="*50)
+        print("SCRAPING SUMMARY")
+        print("="*50)
+        
+        successful = [r for r in results if r['status'] == 'success']
+        failed = [r for r in results if r['status'] == 'error']
+        
+        print(f"Total URLs: {len(results)}")
+        print(f"Successful: {len(successful)}")
+        print(f"Failed: {len(failed)}")
+        
+        if successful:
+            print("\n--- Successful Results ---")
+            for result in successful:
+                print(f"URL: {result['url']}")
+                print(f"Price: {result['price_raw']}")
+                print()
+        
+        if failed:
+            print("\n--- Failed Results ---")
+            for result in failed:
+                print(f"URL: {result['url']}")
+                print(f"Error: {result['message']}")
+                print()
+        
+        # Save results to file
+        save_results_to_file(results)
