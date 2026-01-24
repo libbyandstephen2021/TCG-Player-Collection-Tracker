@@ -10,8 +10,8 @@ from datetime import datetime
 
 # Import functions from other scripts
 from google_sheets_reader import get_urls_from_sheet, save_urls_to_file
-from TCG-URL-Scraper-Draft import scrape_multiple_products, load_urls_from_file
-from write_prices_to_sheet import write_prices_to_sheet, load_scrape_results
+from TCG_URL_Scraper_Draft import scrape_multiple_products, load_urls_from_file
+from append_prices_to_sheet import append_prices_to_sheet, load_scrape_results
 
 
 def run_full_pipeline():
@@ -31,7 +31,8 @@ def run_full_pipeline():
     SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1v7WQo630gSIHZSPitVmA3o4l1t9bE-cFRQRXyXdbz7E/edit?gid=1307754709#gid=1307754709"
     SHEET_NAME = "URL Sheet"
     URL_COLUMN = "url"
-    PRICE_COLUMN = "price"
+    CREDENTIALS_FILE = 'client_secret_489670801796-sel4dubflo3ojjo4bvl30a4f6do0708e.apps.googleusercontent.com.json'
+    ARCHIVE_SHEET_NAME = "Final Script Output"
     
     # Step 1: Read URLs from Google Sheet
     print("\n" + "="*60)
@@ -80,25 +81,24 @@ def run_full_pipeline():
         print(f"✗ Error during scraping: {e}")
         return False
     
-    # Step 3: Write results back to Google Sheet
+    # Step 3: Append results to Google Sheet
     print("\n" + "="*60)
-    print("STEP 3: WRITING RESULTS TO GOOGLE SHEET")
+    print("STEP 3: APPENDING RESULTS TO GOOGLE SHEET")
     print("="*60)
     
     try:
-        summary = write_prices_to_sheet(SPREADSHEET_URL, SHEET_NAME, results, URL_COLUMN, PRICE_COLUMN)
+        summary = append_prices_to_sheet(SPREADSHEET_URL, SHEET_NAME, ARCHIVE_SHEET_NAME, results, CREDENTIALS_FILE)
         
         if summary.get('status') == 'success':
-            print(f"✓ Successfully updated Google Sheet!")
-            print(f"  - Updated rows: {summary.get('updated_rows', 0)}")
-            print(f"  - Not found: {summary.get('not_found', 0)}")
-            print(f"  - Total processed: {summary.get('total_results', 0)}")
+            print(f"✓ Successfully appended to Google Sheet!")
+            print(f"  - Appended rows: {summary.get('appended_rows', 0)}")
+            print(f"  - Date: {summary.get('date', 'N/A')}")
         else:
-            print(f"✗ Error writing to Google Sheet: {summary.get('message')}")
+            print(f"✗ Error appending to Google Sheet: {summary.get('message')}")
             return False
             
     except Exception as e:
-        print(f"✗ Error writing to Google Sheet: {e}")
+        print(f"✗ Error appending to Google Sheet: {e}")
         return False
     
     # Summary
@@ -109,7 +109,7 @@ def run_full_pipeline():
     print(f"\nSummary:")
     print(f"  - URLs read from sheet: {len(urls)}")
     print(f"  - Prices scraped: {len(successful)}")
-    print(f"  - Prices written to sheet: {summary.get('updated_rows', 0)}")
+    print(f"  - Rows appended to sheet: {summary.get('appended_rows', 0)}")
     print(f"  - Errors: {len(failed)}")
     
     return True
