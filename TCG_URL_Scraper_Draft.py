@@ -7,6 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import json
 import time
+import random
 import os
 
 def scrape_tcg_price(url):
@@ -117,7 +118,10 @@ def scrape_multiple_products(urls):
         print(f"\n[{i}/{len(urls)}] Scraping: {url}")
         data = scrape_tcg_price(url)
         results.append(data)
-        time.sleep(1)  # Be respectful to the server - wait 1 second between requests
+        if i < len(urls):  # Don't sleep after the last URL
+            delay = random.uniform(11, 15)
+            print(f"Waiting {delay:.1f} seconds before next request...")
+            time.sleep(delay)  # Be respectful to the server - random delay between 11-15 seconds
     
     return results
 
